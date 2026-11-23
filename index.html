@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalkulator Konsumsi Bahan Printing</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f2ee; --card:#ffffff; --ink:#1d2321; --muted:#6b726f; --line:#e1ddd5;
+    --field:#fbfaf8; --accent:#0f6b5c; --accent-soft:#e3f1ee; --warn:#b4541a; --warn-soft:#fbede3;
+    --print:#2f8f7d; --print-fill:#cfe8e2; --scrap:#f0e2d8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 56px}
+
+  /* Header */
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  header h1{font-size:26px;margin:0 0 4px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);max-width:640px}
+  .hdr-btns{display:flex;gap:8px;flex-shrink:0}
+
+  /* Buttons */
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font:500 13px "IBM Plex Sans",sans-serif;cursor:pointer;color:var(--ink);white-space:nowrap}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#0b5649;color:#fff}
+
+  /* Guide */
+  .guide{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .guide summary{list-style:none;cursor:pointer;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:600}
+  .guide summary::-webkit-details-marker{display:none}
+  .guide summary .chev{margin-left:auto;color:var(--muted);font-size:13px;font-weight:500}
+  .guide[open] summary .chev::after{content:"Tutup ▲"}
+  .guide:not([open]) summary .chev::after{content:"Buka ▼"}
+  .guide summary .ic{width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:14px}
+  .guide-body{padding:4px 18px 18px;border-top:1px solid var(--line)}
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0 0;padding:0;list-style:none}
+  @media (max-width:900px){.steps{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:520px){.steps{grid-template-columns:1fr}}
+  .steps li{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .steps .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;margin-right:6px}
+  .steps b{font-size:14px}
+  .steps p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+  .guide-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:18px}
+  @media (max-width:760px){.guide-cols{grid-template-columns:1fr}}
+  .guide h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;font-weight:600}
+  .gl{margin:0;padding:0;list-style:none;font-size:13.5px}
+  .gl li{padding:6px 0;border-bottom:1px dashed var(--line)}
+  .gl li:last-child{border-bottom:0}
+  .gl b{color:var(--ink)}
+  .gl span{color:var(--muted)}
+  .ex{background:var(--accent-soft);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0b4f44;margin-top:14px}
+  .ex code{font:600 13px "IBM Plex Mono",monospace}
+
+  /* Layout */
+  .grid{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;margin-top:20px;align-items:start}
+  @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+  .left{position:sticky;top:16px}
+  @media (max-width:900px){.left{position:static}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .card h2 .n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;letter-spacing:0}
+  .card h2 .opt-tag{font-size:11px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);background:var(--bg);border-radius:99px;padding:1px 8px}
+  .section + .section{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+
+  /* Inputs */
+  .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .row > *{min-width:0}
+  label{display:block;font-size:13px;font-weight:500;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .field{margin-bottom:12px}
+  .section .field:last-child{margin-bottom:0}
+  .inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--field);overflow:hidden;width:100%}
+  .inp:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .inp input{flex:1;width:100%;min-width:0;border:0;background:transparent;padding:9px 10px;font:600 15px "IBM Plex Mono",monospace;color:var(--ink);outline:none}
+  .inp span{padding:0 10px;color:var(--muted);font-size:13px;flex-shrink:0}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{border:0;background:var(--field);padding:9px 6px;font:500 13px "IBM Plex Sans",sans-serif;cursor:pointer;color:var(--ink);line-height:1.25}
+  .seg button + button{border-left:1px solid var(--line)}
+  .seg button:hover:not(.on){background:var(--accent-soft)}
+  .seg button.on{background:var(--accent);color:#fff}
+  .seg button small{display:block;font-size:11px;opacity:.8}
+  .left-foot{display:flex;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
+
+  /* Output */
+  .right{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+  .kpi .lbl{font-size:12px;color:var(--muted);font-weight:500}
+  .kpi .val{font:600 clamp(22px,2.4vw,28px) "IBM Plex Mono",monospace;margin-top:4px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .kpi.main{background:var(--accent);border-color:var(--accent);color:#fff}
+  .kpi.main .lbl,.kpi.main .sub{color:#cfe8e2}
+  #msg:empty{display:none}
+  #msg{display:flex;flex-direction:column;gap:8px}
+  .note{border-radius:10px;padding:10px 14px;font-size:13.5px}
+  .note.ok{background:var(--accent-soft);color:#0b4f44}
+  .note.warn{background:var(--warn-soft);color:var(--warn)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td{padding:8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  td:first-child{padding-right:12px}
+  td:last-child{text-align:right;font:600 14px "IBM Plex Mono",monospace;white-space:nowrap}
+  tr.grp td{border-bottom:0;padding:16px 0 4px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left}
+  tr.grp:first-child td{padding-top:0}
+  tr.hl td{font-weight:600}
+  tr.hl td:last-child{color:var(--accent)}
+  td small{display:block;font-size:12px;color:var(--muted);font-weight:400}
+
+  .cmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  @media (max-width:560px){.cmp{grid-template-columns:1fr}}
+  .opt{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .opt.best{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .t{font-size:12px;color:var(--muted);font-weight:600}
+  .opt .v{font:600 18px "IBM Plex Mono",monospace;margin:2px 0}
+  .opt .tag{display:inline-block;font-size:11px;background:var(--accent);color:#fff;border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+  svg text{font-family:"IBM Plex Sans",sans-serif}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  footer{margin-top:28px;text-align:center;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Kalkulator Konsumsi Bahan Printing</h1>
+      <p>Hitung berapa pcs cetakan yang didapat per meter dan per roll, serta berapa bahan yang dibutuhkan untuk sebuah order.</p>
+    </div>
+    <div class="hdr-btns">
+      <button class="btn" id="toggleGuide">Panduan cara pakai</button>
+    </div>
+  </header>
+
+  <!-- PANDUAN -->
+  <details class="guide" id="guide" open>
+    <summary><span class="ic">?</span>Panduan cara pakai<span class="chev"></span></summary>
+    <div class="guide-body">
+      <ol class="steps">
+        <li><span class="n">1</span><b>Isi data bahan</b>
+          <p>Masukkan <b>lebar bahan</b> (cm) dan <b>panjang per roll</b> (m). Jika pinggir bahan tidak bisa dicetak, isi <b>margin</b> untuk tiap sisi.</p></li>
+        <li><span class="n">2</span><b>Isi ukuran cetakan</b>
+          <p>Masukkan <b>lebar × panjang</b> satu cetakan (cm). Isi <b>jarak antar cetakan</b> jika perlu celah untuk potong.</p></li>
+        <li><span class="n">3</span><b>Pilih arah cetakan</b>
+          <p>Biarkan <b>Otomatis</b> agar kalkulator memilih arah yang menghasilkan pcs terbanyak. Pilih <b>Normal</b> / <b>Diputar 90°</b> jika arahnya sudah ditentukan.</p></li>
+        <li><span class="n">4</span><b>Isi order (opsional)</b>
+          <p>Masukkan <b>jumlah order</b> dan <b>toleransi reject</b> (%) untuk melihat kebutuhan bahan dalam meter dan roll.</p></li>
+      </ol>
+
+      <div class="guide-cols">
+        <div>
+          <h3>Arti hasil</h3>
+          <ul class="gl">
+            <li><b>Konsumsi (pcs/meter)</b> <span>— rata-rata pcs yang didapat dari tiap 1 meter bahan yang berjalan.</span></li>
+            <li><b>1 Roll dapat</b> <span>— total pcs utuh dari satu roll penuh.</span></li>
+            <li><b>Melintang</b> <span>— jumlah pcs berjajar dalam satu baris, searah lebar bahan.</span></li>
+            <li><b>Efisiensi bahan</b> <span>— persentase luas bahan yang terpakai jadi cetakan. Sisanya terbuang.</span></li>
+            <li><b>Potongan 1 meter utuh</b> <span>— pcs utuh jika bahan dipotong tepat 1 m (bisa lebih kecil dari rata-rata karena baris terakhir terpotong).</span></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Istilah arah</h3>
+          <ul class="gl">
+            <li><b>Normal</b> <span>— sisi <i>lebar cetakan</i> searah dengan lebar bahan.</span></li>
+            <li><b>Diputar 90°</b> <span>— sisi <i>panjang cetakan</i> searah dengan lebar bahan.</span></li>
+            <li><b>Gambar susunan</b> <span>— menunjukkan 1 meter bahan dilihat dari atas. Kotak hijau = cetakan, oranye = sisa lebar/margin, garis putus-putus = baris yang terpotong.</span></li>
+          </ul>
+          <div class="ex"><b>Contoh:</b> bahan <code>150 cm × 50 m</code>, cetakan <code>20 × 10 cm</code>, tanpa margin &amp; jarak.
+            Diputar 90° → 15 pcs melintang × 5 baris/m = <code>75 pcs/m</code>, 1 roll = <code>3.750 pcs</code>. Order 1.000 pcs butuh ±<code>13,33 m</code>.</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <div class="grid">
+    <!-- INPUT -->
+    <div class="card left">
+      <div class="section">
+        <h2><span class="n">1</span>Bahan (Roll)</h2>
+        <div class="row">
+          <div class="field">
+            <label for="bw">Lebar bahan</label>
+            <div class="inp"><input id="bw" type="number" min="0" step="0.1" value="150" inputmode="decimal"><span>cm</span></div>
+          </div>
+          <div class="field">
+            <label for="rl">Panjang per roll</label>
+            <div class="inp"><input id="rl" type="number" min="0" step="0.1" value="50" inputmode="decimal"><span>m</span></div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="mg">Margin tepi (per sisi)</label>
+          <div class="inp"><input id="mg" type="number" min="0" step="0.1" value="0" inputmode="decimal"><span>cm</span></div>
+          <div class="hint">Pinggir kiri &amp; kanan yang tidak bisa dicetak, masing-masing. Isi 0 jika tidak ada.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2><span class="n">2</span>Ukuran Cetakan</h2>
+        <div class="row">
+          <div class="field">
+            <label for="pw">Lebar cetakan</label>
+            <div class="inp"><input id="pw" type="number" min="0" step="0.1" value="20" inputmode="decimal"><span>cm</span></div>
+          </div>
+          <div class="field">
+            <label for="pl">Panjang cetakan</label>
+            <div class="inp"><input id="pl" type="number" min="0" step="0.1" value="10" inputmode="decimal"><span>cm</span></div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="gp">Jarak antar cetakan</label>
+          <div class="inp"><input id="gp" type="number" min="0" step="0.1" value="0" inputmode="decimal"><span>cm</span></div>
+          <div class="hint">Celah untuk potong. Isi 0 jika cetakan rapat.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2><span class="n">3</span>Arah Cetakan</h2>
+        <div class="field">
+          <div class="seg" id="orient">
+            <button data-v="auto" class="on">Otomatis<small>terbaik</small></button>
+            <button data-v="normal">Normal<small>lebar → lebar</small></button>
+            <button data-v="rot">Diputar 90°<small>panjang → lebar</small></button>
+          </div>
+          <div class="hint">"Normal" = lebar cetakan searah lebar bahan.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2><span class="n">4</span>Order <span class="opt-tag">opsional</span></h2>
+        <div class="row">
+          <div class="field">
+            <label for="qty">Jumlah order</label>
+            <div class="inp"><input id="qty" type="number" min="0" step="1" value="1000" inputmode="numeric"><span>pcs</span></div>
+          </div>
+          <div class="field">
+            <label for="ws">Toleransi reject</label>
+            <div class="inp"><input id="ws" type="number" min="0" step="0.1" value="0" inputmode="decimal"><span>%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="left-foot">
+        <button class="btn" id="reset">Reset ke contoh</button>
+      </div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="right">
+      <div id="msg"></div>
+
+      <div class="kpis">
+        <div class="kpi main"><div class="lbl">Konsumsi</div><div class="val" id="k-pm">–</div><div class="sub">pcs / meter</div></div>
+        <div class="kpi"><div class="lbl">1 Roll dapat</div><div class="val" id="k-pr">–</div><div class="sub" id="k-pr-sub">pcs / roll</div></div>
+        <div class="kpi"><div class="lbl">Melintang</div><div class="val" id="k-ac">–</div><div class="sub">pcs per baris</div></div>
+        <div class="kpi"><div class="lbl">Efisiensi bahan</div><div class="val" id="k-ef">–</div><div class="sub" id="k-ef-sub">terpakai</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Rincian perhitungan</h2>
+        <table><tbody id="detail"></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Perbandingan arah cetakan</h2>
+        <div class="cmp" id="cmp"></div>
+      </div>
+
+      <div class="card">
+        <h2>Gambaran susunan dalam 1 meter bahan</h2>
+        <div id="viz"></div>
+        <div class="legend">
+          <span><i style="background:var(--print-fill);border:1px solid var(--print)"></i>Cetakan</span>
+          <span><i style="background:#e9f3f0;border:1px dashed var(--print)"></i>Baris terpotong</span>
+          <span><i style="background:var(--scrap)"></i>Sisa lebar / margin</span>
+          <span><i style="background:var(--field);border:1px solid var(--line)"></i>Bahan</span>
+        </div>
+      </div>
+
+      <div class="card foot">
+        <span class="hint" style="margin:0">Salin ringkasan hasil untuk ditempel ke laporan atau chat.</span>
+        <button class="btn primary" id="copy">Salin ringkasan</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>Kalkulator Konsumsi Bahan · PPIC</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const ids = ["bw","rl","mg","pw","pl","gp","qty","ws"];
+const defaults = {};
+ids.forEach(k => defaults[k] = $(k).value);
+let orient = "auto";
+
+const fmt = (n, d=0) => isFinite(n) ? n.toLocaleString("id-ID",{minimumFractionDigits:d,maximumFractionDigits:d}) : "–";
+const fmtSmart = n => Number.isInteger(n) ? fmt(n) : fmt(n,2);
+const r2 = n => Math.round(n*100)/100;
+
+function calc(W, L, margin, gap, across_w, along_l){
+  // across_w = ukuran cetakan searah lebar bahan, along_l = searah panjang bahan
+  const usable = W - 2*margin;
+  const across = (usable > 0 && across_w > 0) ? Math.floor((usable + gap) / (across_w + gap) + 1e-9) : 0;
+  const pitch = along_l + gap;
+  const rowsPerM = pitch > 0 ? 100 / pitch : 0;
+  const rowsIn1m = pitch > 0 ? Math.floor((100 + gap) / pitch + 1e-9) : 0;
+  const rowsRoll = pitch > 0 ? Math.floor((L*100 + gap) / pitch + 1e-9) : 0;
+  const pcsPerM = across * rowsPerM;
+  const pcsIn1m = across * rowsIn1m;
+  const pcsRoll = across * rowsRoll;
+  const usedW = across > 0 ? across*across_w + (across-1)*gap : 0;
+  const sisaW = W - usedW;
+  const eff = (W > 0 && L > 0) ? (pcsRoll * across_w * along_l) / (W * L * 100) : 0;
+  return {across, rowsPerM, rowsIn1m, rowsRoll, pcsPerM, pcsIn1m, pcsRoll, usedW, sisaW, eff, across_w, along_l, pitch};
+}
+
+function read(){
+  const v = {};
+  ids.forEach(k => v[k] = Math.max(0, parseFloat($(k).value) || 0));
+  return v;
+}
+
+let last = null;
+
+function render(){
+  const v = read();
+  const normal = calc(v.bw, v.rl, v.mg, v.gp, v.pw, v.pl);
+  const rot = calc(v.bw, v.rl, v.mg, v.gp, v.pl, v.pw);
+  let pick, pickName;
+  if (orient === "normal"){ pick = normal; pickName = "Normal"; }
+  else if (orient === "rot"){ pick = rot; pickName = "Diputar 90°"; }
+  else {
+    const useRot = rot.pcsRoll > normal.pcsRoll;
+    pick = useRot ? rot : normal; pickName = useRot ? "Diputar 90°" : "Normal";
+  }
+
+  // pesan
+  const notes = [];
+  const valid = v.bw > 0 && v.pw > 0 && v.pl > 0;
+  if (!valid) notes.push(["warn","Isi lebar bahan, lebar cetakan, dan panjang cetakan terlebih dahulu."]);
+  else if (2*v.mg >= v.bw) notes.push(["warn","Margin terlalu besar: total margin kiri + kanan melebihi lebar bahan."]);
+  else if (pick.across === 0) notes.push(["warn","Cetakan lebih lebar dari bahan yang bisa dipakai, jadi tidak muat. Coba putar cetakan atau cek ukurannya."]);
+  else if (orient !== "auto"){
+    const other = orient === "normal" ? rot : normal;
+    if (other.pcsRoll > pick.pcsRoll) notes.push(["warn",`Jika cetakan ${orient==="normal"?"diputar 90°":"tidak diputar (Normal)"}, 1 roll bisa dapat <b>${fmt(other.pcsRoll)} pcs</b> — lebih banyak ${fmt(other.pcsRoll-pick.pcsRoll)} pcs.`]);
+  } else if (rot.pcsRoll !== normal.pcsRoll){
+    notes.push(["ok",`Arah terbaik: <b>${pickName}</b>. Menghasilkan ${fmt(Math.abs(rot.pcsRoll-normal.pcsRoll))} pcs/roll lebih banyak dari arah sebaliknya.`]);
+  } else {
+    notes.push(["ok","Kedua arah cetakan menghasilkan jumlah yang sama."]);
+  }
+  $("msg").innerHTML = notes.map(n=>`<div class="note ${n[0]}">${n[1]}</div>`).join("");
+
+  // KPI
+  $("k-pm").textContent = fmtSmart(r2(pick.pcsPerM));
+  $("k-pr").textContent = fmt(pick.pcsRoll);
+  $("k-pr-sub").textContent = `pcs / roll ${fmtSmart(v.rl)} m`;
+  $("k-ac").textContent = fmt(pick.across);
+  $("k-ef").textContent = fmt(pick.eff*100,1) + "%";
+  $("k-ef-sub").textContent = `sisa ${fmt((1-pick.eff)*100,1)}%`;
+
+  // order
+  const qtyWithWaste = v.qty * (1 + v.ws/100);
+  const needM = pick.pcsPerM > 0 ? qtyWithWaste / pick.pcsPerM : NaN;
+  const needRoll = (v.rl > 0 && isFinite(needM)) ? needM / v.rl : NaN;
+
+  const G = t => ({grp:t});
+  const rows = [
+    G("Susunan"),
+    ["Arah cetakan dipakai", pickName],
+    ["Ukuran (searah lebar × searah panjang bahan)", `${fmtSmart(pick.across_w)} × ${fmtSmart(pick.along_l)} cm`],
+    ["Lebar bahan terpakai / sisa", `${fmtSmart(r2(pick.usedW))} / ${fmtSmart(r2(pick.sisaW))} cm`],
+    G("Per meter"),
+    ["Baris per meter (rata-rata)", fmtSmart(r2(pick.rowsPerM))],
+    ["Konsumsi rata-rata", `${fmtSmart(r2(pick.pcsPerM))} pcs/m`, true],
+    ["Potongan 1 meter utuh dapat", `${fmt(pick.pcsIn1m)} pcs`],
+    ["Kebutuhan bahan per pcs", pick.pcsPerM>0 ? `${fmt(100/pick.pcsPerM,2)} cm` : "–"],
+    G("Per roll"),
+    ["Total baris dalam 1 roll", fmt(pick.rowsRoll)],
+    ["1 roll dapat", `${fmt(pick.pcsRoll)} pcs`, true],
+  ];
+  if (v.qty > 0){
+    rows.push(G("Order"));
+    rows.push(["Jumlah order", `${fmt(v.qty)} pcs`]);
+    if (v.ws > 0) rows.push([`Termasuk reject ${fmtSmart(v.ws)}%`, `${fmt(Math.ceil(qtyWithWaste - 1e-9))} pcs`]);
+    rows.push(["Kebutuhan bahan", isFinite(needM) ? `${fmt(needM,2)} m` : "–", true]);
+    rows.push(["Kebutuhan roll", isFinite(needRoll) ? `${fmt(needRoll,2)} roll` : "–"]);
+    if (isFinite(needRoll)) rows.push(["Roll yang perlu disiapkan", `${fmt(Math.ceil(needRoll - 1e-9))} roll`]);
+  }
+  $("detail").innerHTML = rows.map(r => r.grp
+    ? `<tr class="grp"><td colspan="2">${r.grp}</td></tr>`
+    : `<tr${r[2]?' class="hl"':""}><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
+
+  // perbandingan
+  const best = rot.pcsRoll > normal.pcsRoll ? "rot" : (normal.pcsRoll > rot.pcsRoll ? "normal" : null);
+  const box = (name, key, r) => `<div class="opt ${best===key?"best":""}">
+      <div class="t">${name}${best===key?'<span class="tag">terbaik</span>':""}</div>
+      <div class="v">${fmtSmart(r2(r.pcsPerM))} pcs/m</div>
+      <div class="hint">${fmt(r.across)} pcs melintang · ${fmt(r.pcsRoll)} pcs/roll · efisiensi ${fmt(r.eff*100,1)}%</div>
+    </div>`;
+  $("cmp").innerHTML = box(`Normal (${fmtSmart(v.pw)} cm melintang)`,"normal",normal) + box(`Diputar 90° (${fmtSmart(v.pl)} cm melintang)`,"rot",rot);
+
+  drawViz(v, pick);
+  last = {v, pick, pickName, needM, needRoll};
+}
+
+function drawViz(v, p){
+  const W = v.bw, M = 100;
+  if (W <= 0 || p.across === 0 || p.along_l <= 0){ $("viz").innerHTML = '<div class="hint">Gambar belum bisa ditampilkan: cek input.</div>'; return; }
+  const maxW = 720, maxH = 300;
+  const s = Math.min(maxW / M, maxH / W);
+  const pad = 34;
+  const w = M*s, h = W*s;
+  let out = `<svg viewBox="0 0 ${w+pad+10} ${h+pad+10}" width="100%" style="max-height:${maxH+60}px">`;
+  out += `<g transform="translate(${pad},10)">`;
+  out += `<rect x="0" y="0" width="${w}" height="${h}" fill="#fbfaf8" stroke="#cfcac0"/>`;
+  if (v.mg>0) out += `<rect x="0" y="0" width="${w}" height="${v.mg*s}" fill="#f0e2d8"/>`;
+  const sisaBawah = W - v.mg - p.usedW;
+  if (sisaBawah > 0.0001) out += `<rect x="0" y="${(v.mg+p.usedW)*s}" width="${w}" height="${sisaBawah*s}" fill="#f0e2d8"/>`;
+  const maxRects = 4000; let n = 0;
+  const rowsShown = Math.ceil(M / p.pitch);
+  for (let r=0; r<rowsShown && n<maxRects; r++){
+    const x = r*p.pitch;
+    if (x >= M) break;
+    const full = x + p.along_l <= M + 1e-9;
+    const rw = Math.min(p.along_l, M - x);
+    for (let c=0; c<p.across && n<maxRects; c++){
+      const y = v.mg + c*(p.across_w + v.gp);
+      out += `<rect x="${x*s}" y="${y*s}" width="${rw*s}" height="${p.across_w*s}" fill="${full?"#cfe8e2":"#e9f3f0"}" stroke="#2f8f7d" stroke-width="${full?0.8:0.5}" ${full?"":'stroke-dasharray="3 2"'}/>`;
+      n++;
+    }
+  }
+  out += `<text x="${w/2}" y="${h+18}" text-anchor="middle" font-size="12" fill="#6b726f">← 1 meter (100 cm) arah panjang roll →</text>`;
+  out += `<text x="-14" y="${h/2}" text-anchor="middle" font-size="12" fill="#6b726f" transform="rotate(-90 -14 ${h/2})">Lebar ${fmtSmart(W)} cm</text>`;
+  out += `</g></svg>`;
+  $("viz").innerHTML = out;
+}
+
+// events
+ids.forEach(k => $(k).addEventListener("input", render));
+function setOrient(val){
+  orient = val;
+  document.querySelectorAll("#orient button").forEach(x => x.classList.toggle("on", x.dataset.v === val));
+  render();
+}
+document.querySelectorAll("#orient button").forEach(b => b.addEventListener("click", () => setOrient(b.dataset.v)));
+
+$("reset").addEventListener("click", () => {
+  ids.forEach(k => $(k).value = defaults[k]);
+  setOrient("auto");
+});
+
+// panduan: ingat buka/tutup
+const guide = $("guide");
+try { if (localStorage.getItem("kkb-guide") === "closed") guide.open = false; } catch(e){}
+guide.addEventListener("toggle", () => {
+  try { localStorage.setItem("kkb-guide", guide.open ? "open" : "closed"); } catch(e){}
+});
+$("toggleGuide").addEventListener("click", () => {
+  guide.open = true;
+  guide.scrollIntoView({behavior:"smooth", block:"start"});
+});
+
+$("copy").addEventListener("click", async () => {
+  if (!last) return;
+  const {v, pick:p, pickName, needM, needRoll} = last;
+  const t = [
+    `KONSUMSI BAHAN PRINTING`,
+    `Bahan: lebar ${fmtSmart(v.bw)} cm, roll ${fmtSmart(v.rl)} m, margin ${fmtSmart(v.mg)} cm`,
+    `Cetakan: ${fmtSmart(v.pw)} x ${fmtSmart(v.pl)} cm, jarak ${fmtSmart(v.gp)} cm, arah ${pickName}`,
+    `Melintang: ${fmt(p.across)} pcs/baris`,
+    `Konsumsi: ${fmtSmart(r2(p.pcsPerM))} pcs/meter`,
+    `1 roll: ${fmt(p.pcsRoll)} pcs`,
+    `Efisiensi bahan: ${fmt(p.eff*100,1)}%`,
+    v.qty>0 ? `Order ${fmt(v.qty)} pcs${v.ws>0?` (+${fmtSmart(v.ws)}% reject)`:""}: butuh ${fmt(needM,2)} m = ${fmt(needRoll,2)} roll` : ""
+  ].filter(Boolean).join("\n");
+  const btn = $("copy");
+  try { await navigator.clipboard.writeText(t); btn.textContent = "Tersalin ✓"; }
+  catch(e){ btn.textContent = "Gagal menyalin"; }
+  setTimeout(()=>btn.textContent="Salin ringkasan",1600);
+});
+
+render();
+</script>
+</body>
+</html>
